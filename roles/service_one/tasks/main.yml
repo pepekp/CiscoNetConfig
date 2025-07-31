@@ -1,7 +1,7 @@
 ---
 - name: Generate configuration files
   ansible.builtin.template:
-    src: roles/dia/templates/dia_template.j2
+    src: roles/dia/templates/service_one_template.j2
     dest: CONFIG/{{SLID}}.cfg
 
 - name: run multiple commands and evaluate the output
@@ -22,7 +22,7 @@
 
 - name: Test reachability to nms
   cisco.ios.ios_ping:
-    dest: 212.23.36.12
+    dest: 10.11.12.1
     count: 100
     size: "{{ping_size}}"
     df_bit: true
