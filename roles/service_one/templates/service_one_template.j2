@@ -52,21 +52,21 @@ interface {{LAN_IF}}
  load-interval 30
 !
 !
-ip route 212.23.36.0 255.255.255.0 {{peip}} 250
+ip route 10.10.0.0 255.255.255.0 {{peip}} 250
 !
 access-list 10 remark MGMT
 access-list 10 permit {{peip}}
-access-list 10 permit 212.23.36.0 0.0.0.255
-access-list 10 permit 213.200.89.32 0.0.0.31
-snmp-server community CPE73f1G RO 10
+access-list 10 permit 10.10.0.0 0.0.0.255
+access-list 10 permit 10.10.0.32 0.0.0.31
+snmp-server community snmpComm RO 10
 snmp-server ifindex persist
 snmp-server trap-source {{WAN_IF}}
 snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart
 snmp-server enable traps tty
 !snmp-server enable traps envmon
 snmp-server enable traps entity
-snmp-server host 212.23.36.110 version 2c CPE73f1G
-snmp-server host 212.23.36.145 version 2c CPE73f1G
+snmp-server host 212.23.36.110 version 2c snmpComm
+snmp-server host 212.23.36.145 version 2c snmpComm
 
 !
 !
@@ -160,8 +160,8 @@ line vty 0 4
 
 no access-list 70
 access-list 70 remark Allowed VPN NTP servers
-access-list 70 permit 212.23.36.12
-access-list 70 permit 212.23.36.150
+access-list 70 permit 10.10.0.12
+access-list 70 permit 10.10.0.120
 !
 no access-list 68
 access-list 68 remark Disable incoming NTP requests
@@ -172,8 +172,8 @@ access-list 68 deny any
 ntp access-group peer 70
 ntp access-group serve-only 68
 !
-ntp server 212.23.36.12
-ntp server 212.23.36.150
+ntp server 10.10.0.12
+ntp server 10.10.0.120
 
 ip subnet-zero
 no ip source-route
@@ -184,12 +184,8 @@ ip classless
 no ip http server
 no ip http secure-server
 
-!end
+vtp domain CPE-{{ACRO}}-{{SLID}}
+vtp transparent
 
-!vlan database
-
-!vtp domain CPE-{{ACRO}}-{{SLID}}
-!vtp transparent
-
-!exit
+exit
 

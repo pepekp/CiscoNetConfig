@@ -51,31 +51,31 @@ interface {{WAN_IF}}
  desc WAN uplink {{ACRO}}-{{SLID}}
 ! load-interval 30
 !
-ip prefix-list BGP-EXPORT description Advertise to PE only networks in this list
-ip prefix-list BGP-EXPORT seq 5 deny 0.0.0.0/0
-ip prefix-list BGP-EXPORT permit {{LAN_SUBNET}}
+ip prefix-list EXPORT description Advertise to PE only networks in this list
+ip prefix-list EXPORT seq 5 deny 0.0.0.0/0
+ip prefix-list EXPORT permit {{LAN_SUBNET}}
 !
-route-map BGP-EXPORT-PRI permit 10
- match ip address prefix-list BGP-EXPORT
+route-map EXPORT-PRI permit 10
+ match ip address prefix-list EXPORT
  set metric 10
 !
-route-map BGP-EXPORT-BACKUP permit 10
- match ip address prefix-list BGP-EXPORT
+route-map EXPORT-BACKUP permit 10
+ match ip address prefix-list EXPORT
  set metric 20
 !
-route-map SET-MED-IN-10 permit 10
+route-map MED-IN-10 permit 10
  set metric 10
  set local-preference 900
 !
-route-map SET-MED-IN-20 permit 10
+route-map MED-IN-20 permit 10
  set metric 20
 !
-ip route 212.23.36.0 255.255.255.0 {{peip}} 250
+ip route 10.10.0.0 255.255.255.0 {{peip}} 250
 !
 access-list 10 remark MGMT
 access-list 10 permit {{peip}}
-access-list 10 permit 212.23.36.0 0.0.0.255
-access-list 10 permit 213.200.89.32 0.0.0.31
+access-list 10 permit 10.10.0.0 0.0.0.255
+access-list 10 permit 10.10.0.32 0.0.0.31
 !
 snmp-server community CPE73f1G RO 10
 snmp-server ifindex persist
@@ -85,8 +85,8 @@ snmp-server enable traps tty
 snmp-server enable traps entity
 !snmp-server enable traps envmon
 snmp-server enable traps entity
-snmp-server host 212.23.36.110 version 2c CPE73f1G
-snmp-server host 212.23.36.145 version 2c CPE73f1G
+snmp-server host 100.64.0.110 version 2c CPE73f1G
+snmp-server host 100.64.0.145 version 2c CPE73f1G
 !
 !line con 0
 ! password cisco
@@ -101,8 +101,8 @@ snmp-server host 212.23.36.145 version 2c CPE73f1G
 
 !no access-list 70
 access-list 70 remark Allowed VPN NTP servers
-access-list 70 permit 212.23.36.12
-access-list 70 permit 212.23.36.150
+access-list 70 permit 10.10.0.12
+access-list 70 permit 10.10.0.120
 !
 !no access-list 68
 access-list 68 remark Disable incoming NTP requests
@@ -113,8 +113,8 @@ access-list 68 deny any
 ntp access-group peer 70
 ntp access-group serve-only 68
 !
-ntp server 212.23.36.12
-ntp server 212.23.36.150
+ntp server 10.10.0.12
+ntp server 10.10.0.120
 
 {% if PRIM_SEC == 0 %}
 ! ## Standalone CPE ##
@@ -126,12 +126,12 @@ router bgp {{CE_ASN}}
  neighbor {{peip}} remote-as 3257
  neighbor {{peip}} description WAN uplink {{ACRO}}-{{SLID}}
  address-family ipv4
-  redistribute connected route-map BGP-EXPORT-PRI
-  redistribute static route-map BGP-EXPORT-PRI
+  redistribute connected route-map EXPORT-PRI
+  redistribute static route-map EXPORT-PRI
   neighbor {{peip}} activate
   neighbor {{peip}} soft-reconfiguration inbound
-  neighbor {{peip}} route-map SET-MED-IN-10 in
-  neighbor {{peip}} route-map BGP-EXPORT-PRI out
+  neighbor {{peip}} route-map MED-IN-10 in
+  neighbor {{peip}} route-map EXPORT-PRI out
   no auto-summary
   no synchronization
  exit-address-family
@@ -140,8 +140,8 @@ router bgp {{CE_ASN}}
 ! ## Primary CPE + HSRP ##
 {% elif PRIM_SEC == 1 %}
 
-track 100 ip route 212.23.36.0 255.255.255.128 reachability
-track 101 ip route 212.23.36.128 255.255.255.128 reachability
+track 100 ip route 10.10.0.0 255.255.255.128 reachability
+track 101 ip route 10.10.0.128 255.255.255.128 reachability
 track 1 list boolean or
  object 100
  object 101
@@ -154,20 +154,11 @@ interface {{LAN_IF}}
 !
 access-list 10 permit {{SEC_CPE_IP}}
 !
-ip prefix-list NMS-DENY description DENY IRT NMS
-ip prefix-list NMS-DENY seq 5 deny 212.23.36.0/24
-ip prefix-list NMS-DENY deny 212.23.36.0/25
-ip prefix-list NMS-DENY deny 212.23.36.128/25
-ip prefix-list NMS-DENY deny 195.202.118.0/24
-ip prefix-list NMS-DENY deny 195.202.116.0/24
-ip prefix-list NMS-DENY deny 195.202.115.0/24
-ip prefix-list NMS-DENY deny 195.81.12.152/30
-ip prefix-list NMS-DENY deny 173.205.72.48/29
-ip prefix-list NMS-DENY deny 173.205.33.24/29
-ip prefix-list NMS-DENY deny 84.233.209.32/28
-ip prefix-list NMS-DENY deny 89.202.140.208/30
-ip prefix-list NMS-DENY deny 89.202.142.156/30
-ip prefix-list NMS-DENY permit 0.0.0.0/0 le 32
+ip prefix-list DENY description DENY IRT NMS
+ip prefix-list DENY seq 5 deny 10.10.0.0/24
+ip prefix-list DENY deny 10.10.0.0/25
+ip prefix-list DENY deny 10.10.0.128/25
+ip prefix-list DENY permit 0.0.0.0/0 le 32
 !
 router bgp {{CE_ASN}}
  timers bgp 10 30
@@ -178,14 +169,14 @@ router bgp {{CE_ASN}}
  neighbor {{SEC_CPE_IP}} remote-as {{CE_ASN}}
  neighbor {{SEC_CPE_IP}} description to backup CPE-{{ACRO}}-{{SEC_CPE_SLID}}
  address-family ipv4
-  redistribute connected route-map BGP-EXPORT-PRI
-  redistribute static route-map BGP-EXPORT-PRI
+  redistribute connected route-map EXPORT-PRI
+  redistribute static route-map EXPORT-PRI
   neighbor {{peip}} activate
   neighbor {{peip}} soft-reconfiguration inbound
-  neighbor {{peip}} route-map SET-MED-IN-10 in
-  neighbor {{peip}} route-map BGP-EXPORT-PRI out
+  neighbor {{peip}} route-map MED-IN-10 in
+  neighbor {{peip}} route-map EXPORT-PRI out
   neighbor {{SEC_CPE_IP}} activate
-  neighbor {{SEC_CPE_IP}} route-map NMS-DENY out
+  neighbor {{SEC_CPE_IP}} route-map DENY out
   neighbor {{SEC_CPE_IP}} next-hop-self
   neighbor {{SEC_CPE_IP}} soft-reconfiguration inbound
  exit-address-family
@@ -194,8 +185,7 @@ router bgp {{CE_ASN}}
 banner exec ^C
 
 ######################################################################
-Initial config template used:
-$Id: ce.cfg,v 1.31 2016/10/07 14:20:55 dimith50 Exp $
+
 This CPE is a primary CPE
 Backup CPE can be found at CPE-{{ACRO}}-{{SEC_CPE_SLID}}
 ######################################################################
@@ -205,8 +195,8 @@ Backup CPE can be found at CPE-{{ACRO}}-{{SEC_CPE_SLID}}
 !
 {% elif PRIM_SEC == 2 %}
 !
-track 100 ip route 212.23.36.0 255.255.255.128 reachability
-track 101 ip route 212.23.36.128 255.255.255.128 reachability
+track 100 ip route 10.10.0.0 255.255.255.128 reachability
+track 101 ip route 10.10.0.128 255.255.255.128 reachability
 track 1 list boolean or
  object 100
  object 101
@@ -219,23 +209,14 @@ interface {{LAN_IF}}
 !
 access-list 10 permit {{SEC_CPE_IP}}
 !
-ip prefix-list NMS-DENY description DENY IRT NMS
-ip prefix-list NMS-DENY seq 5 deny 212.23.36.0/24
-ip prefix-list NMS-DENY deny 212.23.36.0/25
-ip prefix-list NMS-DENY deny 212.23.36.128/25
-ip prefix-list NMS-DENY deny 195.202.118.0/24
-ip prefix-list NMS-DENY deny 195.202.116.0/24
-ip prefix-list NMS-DENY deny 195.202.115.0/24
-ip prefix-list NMS-DENY deny 195.81.12.152/30
-ip prefix-list NMS-DENY deny 173.205.72.48/29
-ip prefix-list NMS-DENY deny 173.205.33.24/29
-ip prefix-list NMS-DENY deny 84.233.209.32/28
-ip prefix-list NMS-DENY deny 89.202.140.208/30
-ip prefix-list NMS-DENY deny 89.202.142.156/30
-ip prefix-list NMS-DENY permit 0.0.0.0/0 le 32
+ip prefix-list DENY description DENY IRT NMS
+ip prefix-list DENY seq 5 deny 10.10.0.0/24
+ip prefix-list DENY deny 10.10.0.0/25
+ip prefix-list DENY deny 10.10.0.128/25
+ip prefix-list DENY permit 0.0.0.0/0 le 32
 !
-route-map NMS-DENY permit 10
- match ip address prefix-list NMS-DENY
+route-map DENY permit 10
+ match ip address prefix-list DENY
 !
 router bgp {{CE_ASN}}
  timers bgp 10 30
@@ -246,14 +227,14 @@ router bgp {{CE_ASN}}
  neighbor {{SEC_CPE_IP}} remote-as {{CE_ASN}}
  neighbor {{SEC_CPE_IP}} description to backup CPE-{{ACRO}}-{{SEC_CPE_SLID}}
  address-family ipv4
-  redistribute connected route-map BGP-EXPORT-BACKUP
-  redistribute static route-map BGP-EXPORT-BACKUP
+  redistribute connected route-map EXPORT-BACKUP
+  redistribute static route-map EXPORT-BACKUP
   neighbor {{peip}} activate
   neighbor {{peip}} soft-reconfiguration inbound
-  neighbor {{peip}} route-map SET-MED-IN-20 in
-  neighbor {{peip}} route-map BGP-EXPORT-BACKUP out
+  neighbor {{peip}} route-map MED-IN-20 in
+  neighbor {{peip}} route-map EXPORT-BACKUP out
   neighbor {{SEC_CPE_IP}} activate
-  neighbor {{SEC_CPE_IP}} route-map NMS-DENY out
+  neighbor {{SEC_CPE_IP}} route-map DENY out
   neighbor {{SEC_CPE_IP}} next-hop-self
   neighbor {{SEC_CPE_IP}} soft-reconfiguration inbound
  exit-address-family
@@ -262,8 +243,6 @@ router bgp {{CE_ASN}}
 banner exec ^C
 
 ######################################################################
-Initial config template used:
-$Id: ce.cfg,v 1.31 2016/10/07 14:20:55 dimith50 Exp $
 This CPE is a primary CPE
 Primary CPE can be found at CPE-{{ACRO}}-{{SEC_CPE_SLID}}
 ######################################################################
@@ -287,7 +266,7 @@ ip route {{item_1}} {{item_2}} {{NEXT_HOP}} track 123
 {% endfor -%}
 !
 {% for line in STATIC_PREFIX -%}
-ip prefix-list BGP-EXPORT permit {{line}}
+ip prefix-list EXPORT permit {{line}}
 {% endfor -%}
 {% endif %}
 
@@ -334,11 +313,11 @@ ip dhcp excluded-address {{lanip}}
 ! ## Skip customer EIGRP ##
 {% else %}
 !
-ip prefix-list BGP-DENY description DENY IRT NMS
-ip prefix-list BGP-DENY seq 5 deny 212.23.36.0/24
-ip prefix-list BGP-DENY deny 212.23.36.0/25
-ip prefix-list BGP-DENY deny 212.23.36.128/25
-ip prefix-list BGP-DENY permit 0.0.0.0/0 le 32
+ip prefix-list DENY description DENY
+ip prefix-list DENY seq 5 deny 10.10.0.0/24
+ip prefix-list DENY deny 10.10.0.0/25
+ip prefix-list DENY deny 10.10.0.128/25
+ip prefix-list DENY permit 0.0.0.0/0 le 32
 !
 route-map EIGRP-TO-BGP deny 10
  match tag 8928
@@ -348,7 +327,7 @@ route-map EIGRP-TO-BGP permit 20
  set weight 0
 !
 route-map BGP-TO-EIGRP permit 10
- match ip address prefix-list BGP-DENY
+ match ip address prefix-list DENY
  set tag 8928
 !
 router eigrp {{EIGRP_ASN}}
@@ -366,25 +345,16 @@ router bgp {{CE_ASN}}
 {% if CE_BGP == '0' %}
 ! ## Skip customer BGP ##
 {% else %}
-ip prefix-list BGP-EXPORT permit 0.0.0.0/0 le 32
+ip prefix-list EXPORT permit 0.0.0.0/0 le 32
 
-ip prefix-list NMS-DENY description DENY IRT NMS
-ip prefix-list NMS-DENY seq 5 deny 212.23.36.0/24
-ip prefix-list NMS-DENY deny 212.23.36.0/25
-ip prefix-list NMS-DENY deny 212.23.36.128/25
-ip prefix-list NMS-DENY deny 195.202.118.0/24
-ip prefix-list NMS-DENY deny 195.202.116.0/24
-ip prefix-list NMS-DENY deny 195.202.115.0/24
-ip prefix-list NMS-DENY deny 195.81.12.152/30
-ip prefix-list NMS-DENY deny 173.205.72.48/29
-ip prefix-list NMS-DENY deny 173.205.33.24/29
-ip prefix-list NMS-DENY deny 84.233.209.32/28
-ip prefix-list NMS-DENY deny 89.202.140.208/30
-ip prefix-list NMS-DENY deny 89.202.142.156/30
-ip prefix-list NMS-DENY permit 0.0.0.0/0 le 32
+ip prefix-list DENY description DENY IRT NMS
+ip prefix-list DENY seq 5 deny 10.10.0.0/24
+ip prefix-list DENY deny 10.10.0.0/25
+ip prefix-list DENY deny 10.10.0.128/25
+ip prefix-list DENY permit 0.0.0.0/0 le 32
 
 route-map CE-TO-C permit 10
- match ip address prefix-list NMS-DENY
+ match ip address prefix-list DENY
 !
 router bgp {{CE_ASN}}
  neighbor {{CUSTOMER_BGP_IP}} remote-as {{CUSTOMER_BGP_ASN}}
@@ -403,16 +373,16 @@ router bgp {{CE_ASN}}
 ! ## Customer OSPF not requsted ##
 {% else %}
 
-ip prefix-list BGP-DENY description DENY IRT NMS
-ip prefix-list BGP-DENY seq 5 deny 212.23.36.0/24
-ip prefix-list BGP-DENY deny 212.23.36.0/25
-ip prefix-list BGP-DENY deny 212.23.36.128/25
-ip prefix-list BGP-DENY permit 0.0.0.0/0 le 32
+ip prefix-list DENY description DENY IRT NMS
+ip prefix-list DENY seq 5 deny 10.10.0.0/24
+ip prefix-list DENY deny 10.10.0.0/25
+ip prefix-list DENY deny 10.10.0.128/25
+ip prefix-list DENY permit 0.0.0.0/0 le 32
 !
-ip prefix-list BGP-EXPORT permit 0.0.0.0/0 le 32
+ip prefix-list EXPORT permit 0.0.0.0/0 le 32
 !
 route-map BGP-TO-OSPF permit 10
- match ip address prefix-list BGP-DENY
+ match ip address prefix-list DENY
  set tag 8928
 !
 route-map OSPF-TO-BGP deny 10
@@ -477,7 +447,7 @@ privilege exec level 0 clear ip dhcp *
 ! Skip CPE Loopback interface
 
 {% else %}
-ip prefix-list BGP-EXPORT permit {{LOOPBACK_IP}}
+ip prefix-list EXPORT permit {{LOOPBACK_IP}}
 interface Loopback{{LOOPBACK_UNIT}}
  desc CUST LOOPBACK {{SLID}}
  ip address {{loopbackip}} {{loopbackmask}}
