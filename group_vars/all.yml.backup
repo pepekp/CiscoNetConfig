@@ -1,0 +1,10 @@
+---
+ansible_python_interpreter: auto_legacy
+ansible_connection: network_cli
+ansible_network_os: ios
+ansible_user: admin
+ansible_password: 3DCb9TYgF3
+ansible_become: yes
+ansible_become_method: enable
+ansible_become_password: 3DCb9TYgF3
+ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q petropi1@212.23.36.12"'

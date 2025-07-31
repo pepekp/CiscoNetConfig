@@ -1,0 +1,195 @@
+do term mon
+ip routing
+
+! Start with basic cleanup of default config
+
+!config-register 0x2102
+! ip cef
+{% if cpe_model == '9300' %}
+! config-register 0x2102
+{% else %}
+config-register 0x2102
+{% endif %}
+
+no ip dhcp excluded-address 10.10.10.1
+no ip dhcp pool ccp-pool
+no ip domain name yourdomain.com
+no username cisco password 0 cisco
+line vty 0 4
+! no access-class 23 in
+!no access-list 23
+!line 2
+! transport input none
+!no ip http access-class 23
+no ip http authentication local
+no ip http timeout-policy idle 60 life 86400 requests 10000
+no banner exec
+no banner login
+!no line vty 5 15
+
+logging buffered 64000
+!username admin password cisco
+!enable secret cisco
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+!
+hostname CPE-{{ACRO}}-{{SLID}}
+!
+!
+vtp domain CPE-{{ACRO}}-{{SLID}}
+vtp mode transparent
+!
+ip sla responder
+!ip sla monitor responder
+!
+interface {{WAN_IF}}
+ description WAN {{ACRO}}-{{SLID}}
+!
+interface {{LAN_IF}}
+ description LAN {{ACRO}}-{{SLID}}
+ ip address {{lanip}} {{lanmask}}
+ load-interval 30
+!
+!
+ip route 212.23.36.0 255.255.255.0 {{peip}} 250
+!
+access-list 10 remark MGMT
+access-list 10 permit {{peip}}
+access-list 10 permit 212.23.36.0 0.0.0.255
+access-list 10 permit 213.200.89.32 0.0.0.31
+snmp-server community CPE73f1G RO 10
+snmp-server ifindex persist
+snmp-server trap-source {{WAN_IF}}
+snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart
+snmp-server enable traps tty
+!snmp-server enable traps envmon
+snmp-server enable traps entity
+snmp-server host 212.23.36.110 version 2c CPE73f1G
+snmp-server host 212.23.36.145 version 2c CPE73f1G
+
+!
+!
+{% if CE_SNMP == '0' %}
+! ## Skip customer SNMP ##
+{% else %}
+access-list 12 remark Customer SNMP access
+{% for item in SNMPNET -%}
+{% set snmp_item_1 = SNMPNET[loop.index-1] %}
+{% set snmp_item_2 = SNMPWILD[loop.index-1] %}
+access-list 12 permit {{snmp_item_1}} {{snmp_item_2}}
+{% endfor -%}
+snmp-server view CUSTOMER sysUpTime included
+snmp-server view CUSTOMER system.5 included
+snmp-server view CUSTOMER interfaces.* included
+snmp-server community {{CE_SNMP_COMMUNITY}} view CUSTOMER RO 12
+{% endif %}
+!
+{% if DHCP_SERVER == '0' %}
+! ## Skip customer DHCP ##
+{% else %}
+!
+ip dhcp pool {{ACRO}}-{{SLID}}
+ network {{lansubnetaddr}} {{lanmask}}
+ default-router {{lanip}}
+ dns-server {{DHCP_DNS[0]}}
+ dns-server {{DHCP_DNS[1]}}
+!
+ip dhcp excluded-address {{lanip}}
+{% endif %}
+!
+{% if CE_SNAT == '0' %}
+! ## Skip customer NAT ##
+{% else %}
+!
+access-list 5 permit {{lansubnetaddr}} {{lanmask}}
+!
+ip nat inside source list 5 interface {{WAN_IF}} overload
+!
+interface {{WAN_IF}}
+ ip nat outside
+!
+interface {{LAN_IF}}
+ ip nat inside
+ ip tcp adjust-mss 1420
+!
+{% endif %}
+
+
+{% if CUSTOMER_SSH == '0' %}
+!### Skip user ssh access ###
+{% else %}
+! Allow login access from below networks
+{% for item in SSHNET -%}
+{% set sshitem_1 = SSHNET[loop.index-1] %}
+{% set sshitem_2 = SSHWILD[loop.index-1] %}
+access-list 10 permit {{sshitem_1}} {{sshitem_2}}
+{% endfor -%}
+!
+username {{SSH_USER}} privilege 0 password {{SSH_PASSWORD}}
+!
+privilege exec level 0 ping *
+privilege exec level 0 traceroute *
+privilege exec level 0 show ip *
+privilege exec level 0 show environment *
+privilege exec level 0 show interfaces *
+privilege exec level 0 show diagbus *
+privilege exec level 0 show arp *
+privilege exec level 0 show police-map *
+privilege exec level 0 show version
+privilege exec level 0 show process
+privilege exec level 0 show access-lists *
+privilege exec level 0 show log *
+privilege exec level 0 show cdp *
+privilege exec level 0 show platform *
+privilege exec level 0 show dsl *
+privilege exec level 0 clear ip dhcp *
+!
+{% endif %}
+
+line con 0
+ password cisco
+!line aux 0
+! password cisco
+line vty 0 4
+! no privilege level 15
+ access-class 10 in
+ transport input ssh
+! password cisco
+
+
+no access-list 70
+access-list 70 remark Allowed VPN NTP servers
+access-list 70 permit 212.23.36.12
+access-list 70 permit 212.23.36.150
+!
+no access-list 68
+access-list 68 remark Disable incoming NTP requests
+access-list 68 deny any
+!
+!
+!
+ntp access-group peer 70
+ntp access-group serve-only 68
+!
+ntp server 212.23.36.12
+ntp server 212.23.36.150
+
+ip subnet-zero
+no ip source-route
+ip tcp path-mtu-discovery
+!no ip domain-lookup
+no ip finger
+ip classless
+no ip http server
+no ip http secure-server
+
+!end
+
+!vlan database
+
+!vtp domain CPE-{{ACRO}}-{{SLID}}
+!vtp transparent
+
+!exit
+

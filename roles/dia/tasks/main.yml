@@ -1,0 +1,96 @@
+---
+- name: Generate configuration files
+  ansible.builtin.template:
+    src: roles/dia/templates/dia_template.j2
+    dest: CONFIG/{{SLID}}.cfg
+
+- name: run multiple commands and evaluate the output
+  ios_command:
+    commands: show version
+  register: voutput
+- name: SHOW DEVICE IOS VERSION
+  debug:
+    msg: "{{ voutput }}"
+
+- name: SHOW DEVICE WAN INTERFACE
+  ios_command:
+    commands: show interfaces {{WAN_IF}}
+  register: wan_if_ouput
+- name: SHOW DEVICE WAN INTERFACE OUTPUT
+  debug:
+    msg: "{{wan_if_ouput}}"
+
+- name: Test reachability to nms
+  cisco.ios.ios_ping:
+    dest: 212.23.36.12
+    count: 100
+    size: "{{ping_size}}"
+    df_bit: true
+    state: 'present'
+  register: pingprobe
+
+- name: LOAD CONFIGURATION FROM FILE
+  cisco.ios.ios_config:
+    src: CONFIG/{{SLID}}.cfg
+  ignore_errors: yes
+
+- name: POST REACHABILITY TEST
+  block:
+  - name: Run cli_command on Cisco IOS
+    ios_command:
+      commands:
+      - show interfaces {{WAN_IF}}
+      - show interfaces {{LAN_IF}}
+    register: result
+  - name: Display result to terminal window
+    debug:
+      msg: "{{ result }}"
+  - name: show running config
+    ios_command:
+      commands: show running-config
+    register: showrunn
+  - name: print output
+    debug:
+      msg: "{{ showrunn }}"
+
+  - name: check wan interface speed duplex and errors
+    cisco.ios.ios_command:
+      commands: show interfaces {{WAN_IF}}
+    register: wan_if_report
+
+  - set_fact:
+      IF_NAME: "{{ wan_if_report.stdout_lines.0.0.split(' ') }}"
+      IF_STAT: "{{ wan_if_report.stdout_lines.0.8 }}"
+      ERR_IN: "{{ wan_if_report.stdout_lines.0.21.split(' ') }}"
+      ERR_OUT: "{{ wan_if_report.stdout_lines.0.24.split(' ') }}"
+  - name: Full report
+    vars:
+     msg: |
+       ===================================================
+       Ping probe results:
+       packets send: {{pingprobe.packets_tx}}
+       packet received: {{pingprobe.packets_rx}}
+       packet loss: {{pingprobe.packet_loss}}
+       ping size: {{ping_size}}
+       ===================================================
+       Inetrface counters:
+       interface name: {{IF_NAME[0]}}
+       inetrface stat: {{IF_STAT}}
+       input errors:   {{ERR_IN[5]}}
+       output errors:  {{ERR_OUT[5]}}
+       ===================================================
+       Client IP address plan:
+       Client Network:    {{lansubnet}}
+       Default gateway:   {{lanip}}
+       Subnet mask:       {{lanmask}}
+       CPE LAN Interface: {{LAN_IF}}
+       CPE WAN Interface: {{WAN_IF}}
+       CPE WAN IP:        {{getcpewanip}}
+       ===================================================
+    debug:
+      msg: "{{ msg.split('\n') }}"
+
+  - name: alerts
+    debug:
+      msg: "Interface errors are found, check {{IF_NAME[0]}}"
+    when: ERR_IN[5] != '0' or ERR_OUT[5] != '0'
