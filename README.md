@@ -1,20 +1,20 @@
  Cisco IOS, IOS-XE configuration with Ansible
  
 .
-├── ansible.cfg
-├── ansible.log
-├── collections
-│   └── requirements.yml
-├── CONFIG
-├── group_vars
-│   ├── jumpserver.yml
-│   └── routers.yml
-├── inventory
-├── main
-├── play_service_one.yml                    
-├── play_service_two.yml
-├── play_split_service.yml
-├── README.md
+├── ansible.cfg<br/>
+├── ansible.log<br/>
+├── collections<br/>
+│   └── requirements.yml<br/>
+├── CONFIG<br/>
+├── group_vars<br/>
+│   ├── jumpserver.yml<br/>
+│   └── routers.yml<br/>
+├── inventory<br/>
+├── main<br/>
+├── play_service_one.yml<br/>                    
+├── play_service_two.yml<br/>
+├── play_split_service.yml<br/>
+├── README.md<br/>
 ├── roles                                   # three type of services
 │   ├── service_one
 │   │   ├── tasks
