@@ -1,0 +1,178 @@
+---
+- name: IP address calc
+  hosts: localhost
+  gather_facts: false
+  vars:
+    wanip: "{{WAN_SUBNET}}"
+    lanip: "{{LAN_SUBNET}}"
+  tasks:
+  # Variable validation 
+  - name: Verify WAN subnet
+    assert:
+      that:
+       - "wanip | ipv4"
+      fail_msg: "Incorrect WAN subnet provided"
+      success_msg: "WAN subnet is valid"
+  - name: Verify LAN subnet
+    assert:
+      that:
+       - "lanip | ipv4"
+      fail_msg: "Incorrect LAN subnet provided"
+      success_msg: "LAN subnet is valid"
+  - name: Verify CPE LAN IP Address
+    assert:
+      that:
+       - "LAN_IP_ADD | ipv4"
+      fail_msg: "Incorrect LAN IP address provided"
+      success_msg: "LAN IP is valid"
+  - name: define cpe wan ip variable
+    set_fact:
+      cpeip: "{{ wanip | ipaddr('2') }}"    
+  - name: Validate primary backup variables
+    # Accepted values are 0,1 and 2
+    assert:
+      that: 
+       - PRIM_SEC <= 2
+       - PRIM_SEC >= 0
+      fail_msg: "Incorrect value"
+      success_msg: "Value is correct"   
+  - name: split netowrk
+    set_fact:
+      getcpeip: "{{ cpeip | ipaddr('address') }}"
+  - name: print cpe wan ip variable
+    debug:
+      msg: "{{getcpeip}}"
+  - name: define pe ip variable
+    set_fact:
+      peip: "{{ wanip | ipaddr('1') }}"
+  - name: split netowrk
+    set_fact:
+      getpeip: "{{ peip | ipaddr('address') }}"
+  - name: print PE variable
+    debug:
+      var: getpeip
+  - name: define cpe lan variables
+    set_fact:
+      cpelanip: "{{ LAN_SUBNET }}"
+  - name: Split LAN Netowrk
+    set_fact:
+      getcpelanip: "{{ cpelanip | ipaddr('address') }}"
+      getcpelanmask:  "{{ cpelanip | ipaddr('netmask') }}"
+      getcpenetwork: "{{ cpelanip | ipaddr('network') }}"
+      getcpwild: "{{ cpelanip | ipaddr('hostmask') }}"
+  - name: Loop static route prefix list
+    set_fact:
+      statipnet: "{{ STATIC_PREFIX | ipaddr('network') }}"
+      statipmask: "{{ STATIC_PREFIX | ipaddr('netmask') }}"
+      statipwild: "{{ STATIC_PREFIX | ipaddr('hostmask') }}"
+    loop:
+      - "{{STATIC_PREFIX}}"
+  - name: Split SSH allowed networks
+    set_fact:
+      sshnet: "{{ SSH_NETWORK_ALLOW | ipaddr('network') }}"
+      sshwild: "{{ SSH_NETWORK_ALLOW | ipaddr('hostmask') }}"
+    loop:
+      - "{{SSH_NETWORK_ALLOW}}"
+  - name: Custmer SNMP 
+    set_fact:
+      snmpnet: "{{ acl12 | ipaddr('network') }}"
+      snmpwild: "{{ acl12 | ipaddr('hostmask') }}"
+    loop:
+      - "{{acl12}}" 
+  - name: Customer Loopback 
+    set_fact:
+      loopbackip: "{{ LOOPBACK_IP | ipaddr('address') }}"
+      loopbackmask: "{{ LOOPBACK_IP | ipaddr('netmask') }}"
+  - name: print prefixes
+    debug:
+      var: statipnet, statipmask, statipwild
+  - name: print CPE LAN IP variable
+    debug:
+      var: getcpelanip, getcpelanmask, getcpenetwork
+  - name: Create dummy host to transfer variables
+    add_host:
+      name: "DUMMY_HOST"
+      ansible_host: "{{getcpeip}}"
+      ansible_ipaddress: "{{getcpeip}}"
+      ansible_user: admin
+      # host: "{{getcpeip}}"
+      gether_facts: False
+      groups: dummygroup
+      getcpewanip: "{{getcpeip}}"
+      peip: "{{getpeip}}"
+      lanip: "{{LAN_IP_ADD}}"
+      lannet: "{{LAN_SUBNET}}"
+      lanmask: "{{getcpelanmask}}"
+      lansubnet: "{{getcpenetwork}}"
+      wildcard: "{{getcpwild}}"
+      hostname: "{{CEHOSTNAME}}"
+      cpestatipnet: "{{statipnet}}"
+      cpestatipmask: "{{statipmask}}"
+      cpestatipwild: "{{statipwild}}"
+      SSHNET: "{{sshnet}}"
+      SSHWILD: "{{sshwild}}"
+      SNMPNET: "{{snmpnet}}"
+      SNMPWILD: "{{snmpwild}}"
+      loopbackip: "{{loopbackip}}"
+      loopbackmask: "{{loopbackmask}}"
+
+  - name: Run expect commands and delegate task to bastion host
+    #async: 30
+    #poll: 1
+    ansible.builtin.shell: |
+      set timeout 5
+      spawn telnet "{{ hostvars['DUMMY_HOST']['getcpewanip'] }}"
+      expect "Password:"
+      send "cisco\n"
+      expect "*>"
+      send "enable\n"
+      expect "Password:"
+      send "cisco\n"
+      expect "#"
+      send "terminal length 0\n"
+      expect "#"
+      send "conf t\r"
+      expect "(config)#"
+      send "username admin password 0 cisco\n"
+      expect "(config)#"
+      send "ip domain name gtt.net\n"
+      expect "(config)#"
+      send "crypto key generate rsa\n"
+      expect ":"
+      send "2048\r"
+      expect "(config)#"
+      send "ip ssh version 2\r"
+      expect "(config)#"
+      send "aaa new-model\r"
+      expect "*(config)#"
+      send "aaa authentication login default local\r"
+      expect "(config)#"
+      send "end\n"
+      expect "#"
+      exit 0
+    register: tclout
+    args:
+      executable: /usr/bin/expect
+    delegate_to: bastion_host
+  - name: get stdout
+    debug:
+      msg: "{{tclout}}"
+  
+- hosts: dummygroup
+  gather_facts: False
+  connection: network_cli
+  roles:
+   - { role: mpls }
+  vars:
+    fname: "{{CEHOSTNAME}}"
+    pewanipaddr: "{{ hostvars['DUMMY_HOST']['peip'] }}"
+    lanip: "{{ hostvars['DUMMY_HOST']['lanip'] }}"
+    lanmask:  "{{ hostvars['DUMMY_HOST']['lanmask'] }}"
+    lansubnet: "{{ hostvars['DUMMY_HOST']['lansubnet'] }}"
+  vars_files:
+    - group_vars/routers.yml    
+  tasks:
+  - debug:
+      msg: "CPE-{{ACRO}}-{{SLID}} provision completed"
+  - debug:
+      msg: "cpeinit -t ssh -l admin -p cisco {{getcpewanip}}"
