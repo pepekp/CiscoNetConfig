@@ -205,7 +205,7 @@
   gather_facts: False
   connection: network_cli
   roles:
-   - { role: dia_mpls }
+   - { role: split_service }
   vars:
     fname: "{{EQPT_SLID}}"
     pewanipaddr: "{{ hostvars['DUMMY_HOST']['peip'] }}"

@@ -1,7 +1,7 @@
 ---
 - name: Generate configuration files
   ansible.builtin.template:
-    src: roles/dia/templates/service_one_template.j2
+    src: roles/service_one/templates/service_one_template.j2
     dest: CONFIG/{{SLID}}.cfg
 
 - name: run multiple commands and evaluate the output

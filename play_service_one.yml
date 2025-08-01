@@ -134,7 +134,7 @@
   gather_facts: False
   connection: network_cli
   roles:
-   - { role: dia }
+   - { role: service_one }
   vars:
     fname: "{{hostname}}"
     pewanipaddr: "{{ hostvars['DUMMY_HOST']['peip'] }}"

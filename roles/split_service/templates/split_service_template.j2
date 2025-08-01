@@ -228,7 +228,7 @@ interface {{LAN_IF}}
 !
 access-list 10 permit {{SEC_CPE_IP}}
 !
-ip prefix-list DENY description DENY IRT NMS
+ip prefix-list DENY description DENY 
 ip prefix-list DENY deny 10.10.0.0/24
 ip prefix-list DENY deny 10.10.0.0/25
 ip prefix-list DENY deny 100.64.0.128/25
@@ -340,7 +340,7 @@ ip prefix-list BGP-DENY deny 100.64.0.128/25
 ip prefix-list BGP-DENY permit 0.0.0.0/0 le 32
 !
 route-map EIGRP-TO-BGP deny 10
- match tag 8928
+ match tag 6565
 !
 route-map EIGRP-TO-BGP permit 20
  set metric 10
@@ -348,7 +348,7 @@ route-map EIGRP-TO-BGP permit 20
 !
 route-map BGP-TO-EIGRP permit 10
  match ip address prefix-list BGP-DENY
- set tag 8928
+ set tag 6565
 !
 router eigrp {{EIGRP_ASN}}
  redistribute bgp {{CE_ASN}} metric 2000 1 255 1 1500 route-map BGP-TO-EIGRP
@@ -402,10 +402,10 @@ ip prefix-list EXPORT permit 0.0.0.0/0 le 32
 !
 route-map BGP-TO-OSPF permit 10
  match ip address prefix-list BGP-DENY
- set tag 8928
+ set tag 6565
 !
 route-map OSPF-TO-BGP deny 10
- match tag 8928
+ match tag 6565
 !
 route-map OSPF-TO-BGP permit 20
  set metric 10

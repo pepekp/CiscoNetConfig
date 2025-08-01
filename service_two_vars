@@ -32,12 +32,12 @@ EIGRP: '0'
 EIGRP_ASN: '1'
 #
 SNMP: '0'
-SNMP_COMMUNITY: '5nmpGTTMplsRouters'
+SNMP_COMMUNITY: 'snmpComm'
 acl12:
   - 192.168.6.44/32
 #
 CUSTOMER_SSH: '0'
-SSH_USER: 'GlobalNetworkInfra'
+SSH_USER: 'username'
 SSH_PASSWORD: 'xxxxxxx'
 SSH_NETWORK_ALLOW:
   - 10.70.216.0/23

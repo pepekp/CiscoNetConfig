@@ -7,5 +7,5 @@ ansible_password: cisco
 ansible_become: yes
 ansible_become_method: enable
 ansible_become_password: cisco
-#ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p -q -l petroip1 212.23.36.12"'
+
 

@@ -1,7 +1,7 @@
 ---
 - name: Generate configuration files
   template: 
-    src: roles/mpls/templates/mpls_cisco.j2
+    src: roles/service_two/templates/service_two_template.j2
     dest: CONFIG/{{SLID}}.cfg
 
 - name: run multiple commands and evaluate the output
@@ -24,7 +24,7 @@
 
 - name: Test reachability to nms
   cisco.ios.ios_ping:
-    dest: 212.23.36.12
+    dest: 10.11.12.1
     count: 100
     size: "{{ping_size}}"
     df_bit: true
@@ -41,7 +41,7 @@
 
 - name: Test reachability to nms
   cisco.ios.ios_ping:
-    dest: 212.23.36.12
+    dest: 10.11.12.1
     count: 10
     size: "{{ping_size}}"
     df_bit: true

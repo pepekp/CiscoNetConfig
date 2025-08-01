@@ -4,21 +4,21 @@ ACRO: THOUG2
 SLID: '2120927-11797391'
 cpe_model: 'default'
 ping_size: '1500'
-wansubnet: '212.222.6.212/30'
-lansubnet: '212.221.113.40/30'
+wansubnet: '10.22.6.212/30'
+lansubnet: '10.22.113.40/30'
 WAN_IF: 'Gig4'
 LAN_IF: 'Vlan1'
 #
 CE_SNMP: '0'
-CE_SNMP_COMMUNITY: 's3Cur3-SNMP'
+CE_SNMP_COMMUNITY: 'comm-SNMP'
 acl12:
-  - 139.53.131.11/32
-  - 139.53.131.40/32
-  - 139.53.131.42/32
+  - 10.53.31.11/32
+  - 10.53.31.40/32
+  - 10.53.31.42/32
 #
 CUSTOMER_SSH: '0'
-SSH_USER: 'gwan'
-SSH_PASSWORD: 'K22&c9pY'
+SSH_USER: 'user'
+SSH_PASSWORD: 'passwd'
 SSH_NETWORK_ALLOW:
   - 139.53.131.0/26
 #

@@ -162,7 +162,7 @@
   gather_facts: False
   connection: network_cli
   roles:
-   - { role: mpls }
+   - { role: service_two }
   vars:
     fname: "{{CEHOSTNAME}}"
     pewanipaddr: "{{ hostvars['DUMMY_HOST']['peip'] }}"

@@ -1,7 +1,7 @@
 ---
 - name: Generate configuration files
   template: 
-    src: roles/dia_mpls/templates/dia_mpls_cisco.j2
+    src: roles/split_service/templates/split_service_template.j2
     dest: CONFIG/{{EQPT_SLID}}.cfg
 
 - name: run multiple commands and evaluate the output
@@ -24,7 +24,7 @@
 
 - name: Test reachability to NMS
   cisco.ios.ios_ping:
-    dest: 212.23.36.12
+    dest: 10.11.12.1
     count: 100
     df_bit: yes
     size: "{{ping_size}}"
@@ -35,9 +35,9 @@
     src: CONFIG/{{EQPT_SLID}}.cfg
   ignore_errors: yes
 
-- name: Post reachability test to 212.23.36.12
+- name: Post reachability test to 10.11.12.1
   cisco.ios.ios_ping:
-    dest: 212.23.36.12
+    dest: 10.11.12.1
     count: 10
     size: "{{ping_size}}"
 - name: Run cli_command on Cisco IOS and display results
